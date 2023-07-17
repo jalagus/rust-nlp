@@ -55,9 +55,9 @@ fn encode(text: String, embeddings: HashMap<String, Vec<f32>>) -> Array2<f32> {
     ndarray_2d
 }
 
-fn lr_cov_repr(doc: &Array2<f32>) -> (Array2<f32>, Array1<f32>, Array2<f32>) {
+fn lr_cov_repr(doc: &Array2<f32>, k: usize) -> (Array2<f32>, Array1<f32>, Array2<f32>) {
     let repr = ndarray_linalg::TruncatedSvd::new(doc.t().dot(doc), ndarray_linalg::TruncatedOrder::Largest)
-        .decompose(2)
+        .decompose(k)
         .unwrap();
 
     let (u, s, v) = repr.values_vectors();
@@ -69,10 +69,10 @@ fn lr_cov_repr(doc: &Array2<f32>) -> (Array2<f32>, Array1<f32>, Array2<f32>) {
 
 fn main() {
     //load_word2vec_gzip("google-word2vec.bin.gz".to_string());
-    let embeddings = load_glove("glove.6B.50d.txt".to_string());
-    let doc = encode(String::from("This is a test sentence."), embeddings);
+    let embeddings = load_glove("glove.dev.50d.txt".to_string());
+    let doc = encode(String::from("the said with by his from"), embeddings);
 
-    let (u, s, v) = lr_cov_repr(&doc);
+    let (u, s, v) = lr_cov_repr(&doc, 2);
 
     println!("Singular values: {:?}", s);
     // Do the Kolmgorov thing with matrix SVDs for
