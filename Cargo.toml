@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 flate2 = "1.0.26"
 ndarray = "0.15.6"
+ndarray-linalg = "0.16.0"

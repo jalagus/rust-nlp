@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use flate2::read::GzDecoder;
 use std::fs;
 use std::io::prelude::*;
-use ndarray::array;
+use ndarray::{array, Array2};
 
 
 fn load_word2vec_gzip(filename: String) -> HashMap<String, Vec<f32>> {
@@ -36,20 +36,36 @@ fn load_glove(filename: String) -> HashMap<String, Vec<f32>> {
     words
 }
 
-fn encode(text: String, embeddings: HashMap<String, Vec<f32>>) {
+fn encode(text: String, embeddings: HashMap<String, Vec<f32>>) -> Array2<f32> {
     let tokens: Vec<&str> = text.split_whitespace().collect();
+    let mut vectors: Vec<Vec<f32>> = Vec::new();
 
-    let vectors: Vec<&Vec<f32>> = tokens.into_iter()
-        .map(|x| embeddings.get(x).unwrap_or(vec![0.0])).collect();
+    for token in tokens {
+        match embeddings.get(token) {
+            Some(res) => vectors.push(res.to_vec()),
+            None => {}
+        }
+    }
 
-    let arr = array![[1.0, 2.0], [2.0, 1.0]];
-    println!("{:?}", vectors);
+    let ndarray_2d: Array2<f32> = Array2::from_shape_vec(
+        (vectors.len(), vectors[0].len()),
+        vectors.iter().flatten().cloned().collect(),
+    ).unwrap();
+
+    ndarray_2d
 }
 
 fn main() {
     //load_word2vec_gzip("google-word2vec.bin.gz".to_string());
     let embeddings = load_glove("glove.6B.50d.txt".to_string());
-    encode(String::from("This is a test sentence."), embeddings);
+    let doc = encode(String::from("This is a test sentence."), embeddings);
+    println!("{:?}", doc.dot(&doc.t()));
+
+    let repr = ndarray_linalg::TruncatedSvd::new(doc, ndarray_linalg::TruncatedOrder::Largest)
+        .decompose(2)
+        .unwrap();
+
+    println!("{:?}", repr);
     // Do the Kolmgorov thing with matrix SVDs for
     // https://aclanthology.org/2023.findings-acl.426.pdf
 }
