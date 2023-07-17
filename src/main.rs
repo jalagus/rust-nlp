@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use flate2::read::GzDecoder;
 use std::fs;
 use std::io::prelude::*;
-use ndarray::{array, Array2};
+use ndarray::{Array1, Array2};
 
 
 fn load_word2vec_gzip(filename: String) -> HashMap<String, Vec<f32>> {
@@ -55,17 +55,26 @@ fn encode(text: String, embeddings: HashMap<String, Vec<f32>>) -> Array2<f32> {
     ndarray_2d
 }
 
+fn lr_cov_repr(doc: &Array2<f32>) -> (Array2<f32>, Array1<f32>, Array2<f32>) {
+    let repr = ndarray_linalg::TruncatedSvd::new(doc.t().dot(doc), ndarray_linalg::TruncatedOrder::Largest)
+        .decompose(2)
+        .unwrap();
+
+    let (u, s, v) = repr.values_vectors();
+    
+    let s_sqrt: Array1<f32> = s.iter().map(|x| x.sqrt()).collect();
+
+    (u, s, v)
+}
+
 fn main() {
     //load_word2vec_gzip("google-word2vec.bin.gz".to_string());
     let embeddings = load_glove("glove.6B.50d.txt".to_string());
     let doc = encode(String::from("This is a test sentence."), embeddings);
-    println!("{:?}", doc.dot(&doc.t()));
 
-    let repr = ndarray_linalg::TruncatedSvd::new(doc, ndarray_linalg::TruncatedOrder::Largest)
-        .decompose(2)
-        .unwrap();
+    let (u, s, v) = lr_cov_repr(&doc);
 
-    println!("{:?}", repr);
+    println!("Singular values: {:?}", s);
     // Do the Kolmgorov thing with matrix SVDs for
     // https://aclanthology.org/2023.findings-acl.426.pdf
 }
